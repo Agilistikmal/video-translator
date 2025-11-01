@@ -43,63 +43,12 @@ pip install -e .
 
 -----
 
-## ⚙️ Configuration
-
-A configuration file (`config.ini` or similar) is used to set up API keys, target/source languages, and output preferences.
-
-### Example `config.ini`
-
-```ini
-[TRANSLATOR]
-service = deepl
-api_key = YOUR_DEEPL_API_KEY
-source_lang = ja  ; Japanese
-target_lang = en  ; English
-
-[SHOWROOM]
-# Specific configurations for fetching Showroom captions (details depend on implementation)
-# For example: URL pattern, API endpoints, etc.
-```
-
------
-
 ## 💡 Usage
 
-### Basic Real-Time Translation
-
-The core of the library is the `Translator` class and the `LiveCaptionFetcher` (or a similar source-specific class).
+Soon...
 
 ```python
 from video_translator import Translator
-from video_translator.sources.showroom import ShowroomCaptionFetcher
-import time
-
-# Initialize the components
-translator = Translator(config_file='config.ini')
-fetcher = ShowroomCaptionFetcher(room_id="12345")
-
-print("Starting live translation...")
-
-try:
-    for original_caption in fetcher.start_listening():
-        if original_caption:
-            translated_caption = translator.translate(original_caption)
-            
-            print(f"Original (ja): {original_caption}")
-            print(f"Translated (en): **{translated_caption}**\n")
-            
-except KeyboardInterrupt:
-    print("\nTranslation stopped by user.")
-finally:
-    fetcher.stop_listening()
-```
-
-### Running the CLI Tool (If applicable)
-
-For quick usage, you can run the pre-built CLI script:
-
-```bash
-video-translator-cli --source showroom --room-id 12345
 ```
 
 -----
