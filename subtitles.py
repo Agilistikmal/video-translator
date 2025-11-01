@@ -8,5 +8,6 @@ class Subtitle(TypedDict):
 
 
 class Subtitles(TypedDict):
+    original_language: str
     language: str
     subtitles: list[Subtitle]
