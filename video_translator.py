@@ -1,16 +1,34 @@
 import argparse
 
+from subtitles import Subtitles
+
 
 class VideoTranslator:
     def __init__(self, video_path):
         self.video_path = video_path
 
-    def translate(self, text):
-        return text
+    def generate_subtitles(
+        self, video_path: str, translation_language: str | None = None
+    ) -> Subtitles:
+        subtitles: Subtitles = {}
 
-    def save(self, output_path):
+        if translation_language:
+            subtitles["language"] = translation_language
+        else:
+            subtitles["language"] = "original"
+
+        return subtitles
+
+    def save_subtitles(self, subtitles: Subtitles, output_path: str) -> None:
+        if not output_path.endswith(".srt"):
+            raise ValueError("Output path must end with .srt")
+
         with open(output_path, "w") as f:
-            f.write(self.text)
+            for index, subtitle in enumerate(subtitles["subtitles"]):
+                f.write(f"{index + 1}\n")
+                f.write(f"{subtitle['start']} --> {subtitle['end']}\n")
+                f.write(f"{subtitle['text']}\n")
+                f.write("\n")
 
 
 if __name__ == "__main__":
@@ -26,5 +44,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     video_translator = VideoTranslator(args.video_path)
-    print(video_translator.translate(args.language))
-    video_translator.save(args.output_path)
+    subtitles = video_translator.generate_subtitles(args.video_path, args.language)
+    print(subtitles)
+    video_translator.save_subtitles(subtitles, args.output_path)
