@@ -16,7 +16,7 @@ class VideoTranslator:
         self.video_path = video_path
         self.video_name, self.video_extension = utils.split_file_name(video_path)
         self.context = context
-        self.whisper_model = whisper.load_model("medium")
+        self.whisper_model = whisper.load_model("base")
         self.subtitles = Subtitles()
         self.subtitle_paths: list[str] = []
         self.audio_path: str | None = None
