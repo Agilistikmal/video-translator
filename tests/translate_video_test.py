@@ -7,13 +7,13 @@ class TestVideoTranslator(unittest.TestCase):
     def test_generate_subtitles_short(self):
         video_path = "./tests/data/short.mp4"
         video_translator = VideoTranslator(video_path)
-        subtitles = video_translator.generate_subtitles(video_path)
-        self.assertEqual(subtitles["original_language"], "id")
-        self.assertEqual(subtitles["language"], "id")
+        subtitles = video_translator.generate_subtitles(["id", "en"])
+        self.assertEqual(subtitles.original_language, "id")
+        self.assertEqual(subtitles.languages, ["id", "en"])
 
     def test_generate_subtitles_complete(self):
         video_path = "./tests/data/JKT48 13th Generation Profile_ Jemima.mp4"
         video_translator = VideoTranslator(video_path)
-        subtitles = video_translator.generate_subtitles(video_path)
-        self.assertEqual(subtitles["original_language"], "id")
-        self.assertEqual(subtitles["language"], "id")
+        subtitles = video_translator.generate_subtitles(["en", "id", "jp"])
+        self.assertEqual(subtitles.original_language, "id")
+        self.assertEqual(subtitles.languages, ["en", "id", "jp"])

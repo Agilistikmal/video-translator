@@ -2,24 +2,35 @@ import argparse
 import json
 import os
 import subprocess
-from typing import Literal
+from dotenv import load_dotenv
 import whisper
 
-from subtitles import Subtitles
+from services.openai import OpenAIService
+from services.subtitles import Subtitles
+import utils
 
 
 class VideoTranslator:
-    def __init__(self, video_path):
+    def __init__(self, video_path: str, context: str = None):
+        load_dotenv()
         self.video_path = video_path
-        self.whisper_model = whisper.load_model("turbo")
+        self.video_name, self.video_extension = utils.split_file_name(video_path)
+        self.context = context
+        self.whisper_model = whisper.load_model("medium")
+        self.subtitles = Subtitles()
+        self.subtitle_paths: list[str] = []
+        self.audio_path: str | None = None
+        self.openai_client: OpenAIService = OpenAIService.deepseek_client(
+            os.getenv("DEEPSEEK_API_KEY")
+        )
 
-    def convert_video_to_audio(self, video_path: str) -> str:
-        audio_path = f"{video_path}.wav"
+    def convert_video_to_audio(self):
+        audio_path = f"{self.video_name}.wav"
         result = subprocess.run(
             [
                 "ffmpeg",
                 "-i",
-                video_path,
+                self.video_path,
                 "-q:a",
                 "0",
                 "-map",
@@ -32,17 +43,38 @@ class VideoTranslator:
         )
         if result.returncode != 0:
             raise RuntimeError(f"Failed to convert video to audio: {result.stderr}")
-        return audio_path
+        self.audio_path = audio_path
 
-    def insert_subtitles_to_video(self, video_path: str, subtitles_path: str) -> str:
-        output_video_path = f"{subtitles_path}.mp4"
+    def insert_subtitles_to_video(self) -> str:
+        ffmpeg_subtitles_args = []
+        base_margin = 5
+        margin_increment = 10  # Margin between language
+
+        font_size = 12 if len(self.subtitles.languages) > 1 else 18
+
+        for index, subtitle_path in enumerate(self.subtitle_paths):
+            margin_v = base_margin + (index * margin_increment)
+            filter_color = (
+                "PrimaryColour=&HFFFFFF,OutlineColour=&H000000"
+                if index % 2 == 0
+                else "PrimaryColour=&H00FFFF,OutlineColour=&H000000"
+            )
+            filter_arg = f"subtitles={subtitle_path}:force_style='Alignment=2,Fontsize={font_size},MarginV={margin_v},{filter_color}'"
+            ffmpeg_subtitles_args.append(filter_arg)
+
+        ffmpeg_subtitles_args_str = ",".join(ffmpeg_subtitles_args)
+
+        output_video_path = (
+            f"{self.video_name}_sub_{'_'.join(self.subtitles.languages)}.mp4"
+        )
+
         result = subprocess.run(
             [
                 "ffmpeg",
                 "-i",
-                video_path,
+                self.video_path,
                 "-vf",
-                f"subtitles={subtitles_path}",
+                ffmpeg_subtitles_args_str,
                 "-c:v",
                 "libx264",
                 "-c:a",
@@ -53,27 +85,83 @@ class VideoTranslator:
                 "quiet",
             ]
         )
+
         if result.returncode != 0:
             raise RuntimeError(f"Failed to insert subtitles to video: {result.stderr}")
+
         return output_video_path
 
-    def generate_subtitles(
-        self, video_path: str, translation_language: str | None = None
-    ) -> Subtitles:
-        subtitles: Subtitles = Subtitles()
+    def translate_subtitles(self):
+        prompt = f"""
+        Translate the following subtitles to {
+            self.subtitles.languages
+        }. Original language is {self.subtitles.original_language}.
+        The subtitles are:
+        {self.subtitles.subtitles[self.subtitles.original_language]}
 
-        audio_path = self.convert_video_to_audio(video_path)
-        audio = whisper.load_audio(audio_path)
+        Double check original subtitle, fix it if there was an typo, missleading pronounce, or anything with your knowledge. But make sure not out of context.
+
+        Additional Context about the video: {self.context}
+
+        Return the subtitles in the following json array format. Each language should have its own array.
+        Example:
+        """
+
+        prompt += """\n
+        ```json
+        "en": [
+            {
+            "start": 0.0,
+                "end": 1.0,
+                "text": "Hello, world!"
+            },
+            {
+            "start": 1.5,
+                "end": 2.5,
+                "text": "Hello, world! 2"
+            }
+        ],
+        "id": [
+            {
+            "start": 0.0,
+                "end": 1.0,
+                "text": "Halo, dunia!"
+            },
+            {
+            "start": 1.5,
+                "end": 2.5,
+                "text": "Halo, dunia! 2"
+            }
+        ]
+        ```
+        """
+        response = self.openai_client.send_message(
+            message=prompt, response_with_json=True
+        )
+        for language, subtitles in json.loads(response).items():
+            self.subtitles.subtitles[language] = subtitles
+
+    def generate_subtitles(
+        self, translation_languages: list[str] | None = None
+    ) -> Subtitles:
+        self.subtitles: Subtitles = Subtitles()
+
+        self.convert_video_to_audio()
+        audio = whisper.load_audio(self.audio_path)
         audio = whisper.pad_or_trim(audio)
 
         mel = whisper.log_mel_spectrogram(
             audio, n_mels=self.whisper_model.dims.n_mels
         ).to(self.whisper_model.device)
         _, probs = self.whisper_model.detect_language(mel)
-        subtitles["original_language"] = max(probs, key=probs.get)
+        self.subtitles.original_language = max(probs, key=probs.get)
+        if translation_languages:
+            self.subtitles.languages = translation_languages
+        else:
+            self.subtitles.languages = [self.subtitles.original_language]
 
-        result = self.whisper_model.transcribe(audio_path)
-        subtitles["subtitles"] = [
+        result = self.whisper_model.transcribe(self.audio_path)
+        self.subtitles.subtitles[self.subtitles.original_language] = [
             {
                 "start": segment["start"],
                 "end": segment["end"],
@@ -82,61 +170,16 @@ class VideoTranslator:
             for segment in result["segments"]
         ]
 
-        if translation_language:
-            subtitles["language"] = translation_language
-        else:
-            subtitles["language"] = subtitles["original_language"]
+        self.translate_subtitles()
 
-        subtitle_path = self.save_subtitles(
-            subtitles,
-            f"{video_path}_sub_{subtitles['language']}.srt",
-        )
-        self.insert_subtitles_to_video(video_path, subtitle_path)
+        self.subtitle_paths = self.subtitles.save_to_srt(self.video_name)
+        self.insert_subtitles_to_video()
 
-        os.remove(audio_path)
-        os.remove(subtitle_path)
+        os.remove(self.audio_path)
+        for subtitle_path in self.subtitle_paths:
+            os.remove(subtitle_path)
 
-        return subtitles
-
-    def seconds_to_srt_time(self, seconds: float) -> str:
-        total_seconds = int(seconds)
-        milliseconds = int((seconds - total_seconds) * 1000)
-
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        secs = total_seconds % 60
-
-        return f"{hours:02d}:{minutes:02d}:{secs:02d},{milliseconds:03d}"
-
-    def save_subtitles(
-        self,
-        subtitles: Subtitles,
-        output_path: str,
-        format: Literal["srt", "json"] = None,
-    ) -> None:
-        if format is None:
-            if output_path.endswith(".srt"):
-                format = "srt"
-            elif output_path.endswith(".json"):
-                format = "json"
-            else:
-                raise ValueError("Output path must end with .srt or .json")
-
-        if format == "srt":
-            with open(output_path, "w") as f:
-                for index, subtitle in enumerate(subtitles["subtitles"]):
-                    f.write(f"{index + 1}\n")
-                    f.write(
-                        f"{self.seconds_to_srt_time(subtitle['start'])} --> {self.seconds_to_srt_time(subtitle['end'])}\n"
-                    )
-                    f.write(f"{subtitle['text']}\n")
-                    f.write("\n")
-
-        elif format == "json":
-            with open(output_path, "w") as f:
-                json.dump(subtitles, f, indent=4)
-
-        return output_path
+        return self.subtitles
 
 
 if __name__ == "__main__":
