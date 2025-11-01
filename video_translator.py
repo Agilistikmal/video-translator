@@ -1,4 +1,6 @@
 import argparse
+import json
+from typing import Literal
 
 from subtitles import Subtitles
 
@@ -19,16 +21,34 @@ class VideoTranslator:
 
         return subtitles
 
-    def save_subtitles(self, subtitles: Subtitles, output_path: str) -> None:
-        if not output_path.endswith(".srt"):
-            raise ValueError("Output path must end with .srt")
+    def save_subtitles(
+        self,
+        subtitles: Subtitles,
+        output_path: str,
+        format: Literal["srt", "json"] | None,
+    ) -> None:
+        if format is None:
+            if output_path.endswith(".srt"):
+                format = "srt"
+            elif output_path.endswith(".json"):
+                format = "json"
+            else:
+                raise ValueError("Output path must end with .srt or .json")
 
-        with open(output_path, "w") as f:
-            for index, subtitle in enumerate(subtitles["subtitles"]):
-                f.write(f"{index + 1}\n")
-                f.write(f"{subtitle['start']} --> {subtitle['end']}\n")
-                f.write(f"{subtitle['text']}\n")
-                f.write("\n")
+        if format is not None:
+            output_path = f"{output_path.split('.')[0]}.{format}"
+
+        if format == "srt":
+            with open(output_path, "w") as f:
+                for index, subtitle in enumerate(subtitles["subtitles"]):
+                    f.write(f"{index + 1}\n")
+                    f.write(f"{subtitle['start']} --> {subtitle['end']}\n")
+                    f.write(f"{subtitle['text']}\n")
+                    f.write("\n")
+
+        elif format == "json":
+            with open(output_path, "w") as f:
+                json.dump(subtitles, f, indent=4)
 
 
 if __name__ == "__main__":
