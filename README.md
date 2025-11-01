@@ -3,7 +3,7 @@
 
 # 🎥 video-translator
 
-An Open Source Python library initially designed to **translate subtitles/captions from live video streams**, especially those from the **AKB48 Group Live Showroom**.
+An Open Source Python library initially designed to **translate subtitles/captions from video**, especially those from the **AKB48 Group Showroom Live** or **JKT48 IDN Live**.
 
 > **Note:** While originally built for Showroom translations, this library is designed to be **flexible** and can be adapted for translating subtitles from **various video sources**.
 
@@ -11,9 +11,8 @@ An Open Source Python library initially designed to **translate subtitles/captio
 
 ## ✨ Features
 
-  * **Live Translation:** Translate incoming subtitles/captions in real-time.
-  * **Showroom Integration:** Specific modules/scripts to interface with the Showroom platform's caption system (or similar streaming sites).
-  * **Customizable Translators:** Support for various translation APIs (e.g., Google Translate, DeepL, etc.) via a plug-in architecture.
+  * **Generate Subtitles:** Generate original subtitles.
+  * **Video Translation:** Translate subtitles into video.
   * **Output Flexibility:** Display translations in a new window, overlay on the video (where supported), or save to a file (e.g., `.srt`).
   * **Caching:** Optional caching of previously translated phrases to reduce API calls and latency.
 
@@ -25,18 +24,18 @@ An Open Source Python library initially designed to **translate subtitles/captio
 
   * Python 3.8 or higher.
   * An active internet connection (for translation APIs).
-  * API key for your chosen translation service (e.g., DeepL, Google Cloud Translation).
+  * Deepseek API Key (we use deepseek to translate).
 
 ### Using pip
 
 ```bash
-pip install video-translator
+pip install git+https://github.com/agilistikmal/video-translator.git
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/video-translator.git
+git clone https://github.com/agilistikmal/video-translator.git
 cd video-translator
 pip install -e .
 ```
@@ -48,14 +47,14 @@ pip install -e .
 Soon...
 
 ```python
-from video_translator import Translator
+from video_translator import VideoTranslator
 ```
 
 -----
 
 ## 🤝 Contributing
 
-Contributions are highly welcome\! Whether it's adding support for a new translation API, improving the caption fetching logic for Showroom, or fixing bugs, feel free to open an issue or submit a pull request.
+Contributions are highly welcome\! Whether it's adding support for a new translation API, or fixing bugs, feel free to open an issue or submit a pull request.
 
 ### To contribute:
 
@@ -73,10 +72,8 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 -----
 
-## 📞 Contact
+## 📞 Author
 
-Your Name / Your GitHub Username - [@YourTwitterHandle](https://www.google.com/search?q=https://twitter.com/YourTwitterHandle) (Optional)
-
-Project Link: [https://github.com/yourusername/video-translator](https://www.google.com/search?q=https://github.com/yourusername/video-translator)
+Agil Ghani Istikmal - [@agilistikmal](https://github.com/agilistikmal)
 
 -----
