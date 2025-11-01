@@ -52,6 +52,12 @@ from video_translator import VideoTranslator
 
 -----
 
+## 📚 Example
+
+You can see example test case in [test/](https://github.com/Agilistikmal/video-translator/tree/master/tests)
+
+-----
+
 ## 🤝 Contributing
 
 Contributions are highly welcome\! Whether it's adding support for a new translation API, or fixing bugs, feel free to open an issue or submit a pull request.
