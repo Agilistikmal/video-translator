@@ -22,5 +22,5 @@ class TestVideoTranslator(unittest.TestCase):
         video_path = "./tests/data/48_KABUTAKE_MANA.mp4"
         video_translator = VideoTranslator(video_path)
         subtitles = video_translator.generate_subtitles(["en", "id", "ja"])
-        self.assertEqual(subtitles.original_language, "id")
+        self.assertEqual(subtitles.original_language, "ja")
         self.assertEqual(subtitles.languages, ["en", "id", "ja"])

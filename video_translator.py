@@ -15,7 +15,7 @@ class VideoTranslator:
         self.video_path = video_path
         self.video_name, self.video_extension = utils.split_file_name(video_path)
         self.context = context
-        self.whisper_model = WhisperModel("turbo", device="cpu", compute_type="int8")
+        self.whisper_model = WhisperModel("base", device="auto", compute_type="int8")
         self.subtitles = Subtitles()
         self.subtitle_paths: list[str] = []
         self.audio_path: str | None = None
@@ -91,6 +91,7 @@ class VideoTranslator:
         for language in self.subtitles.languages:
             if language == self.subtitles.original_language:
                 continue
+
             self.subtitles.subtitles[language] = [
                 {
                     "start": subtitle["start"],
@@ -142,16 +143,17 @@ class VideoTranslator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--video_path", type=str, required=True, help="Path to the video file"
+        "--source", type=str, required=True, help="Path to the video file"
     )
     parser.add_argument(
-        "--language", type=str, required=True, help="Language to translate to"
+        "--languages", type=list[str], required=True, help="Languages to translate to"
     )
     parser.add_argument(
-        "--output_path", type=str, required=True, help="Path to the output file"
+        "--output", type=str, required=True, help="Path to the output file"
     )
     args = parser.parse_args()
-    video_translator = VideoTranslator(args.video_path)
-    subtitles = video_translator.generate_subtitles(args.video_path, args.language)
+    video_translator = VideoTranslator(args.source)
+    subtitles = video_translator.generate_subtitles(args.languages)
+
+    subtitles.subtitles = None
     print(subtitles)
-    video_translator.save_subtitles(subtitles, args.output_path)
