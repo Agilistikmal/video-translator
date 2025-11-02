@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from dotenv import load_dotenv
-import whisper
+from faster_whisper import WhisperModel
 
 from services.openai import OpenAIService
 from services.subtitles import Subtitles
@@ -16,7 +16,7 @@ class VideoTranslator:
         self.video_path = video_path
         self.video_name, self.video_extension = utils.split_file_name(video_path)
         self.context = context
-        self.whisper_model = whisper.load_model("base")
+        self.whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
         self.subtitles = Subtitles()
         self.subtitle_paths: list[str] = []
         self.audio_path: str | None = None
@@ -47,8 +47,8 @@ class VideoTranslator:
 
     def insert_subtitles_to_video(self) -> str:
         ffmpeg_subtitles_args = []
-        base_margin = 5
-        margin_increment = 10  # Margin between language
+        base_margin = 10
+        margin_increment = 15  # Margin between language
 
         font_size = 12 if len(self.subtitles.languages) > 1 else 18
 
@@ -147,27 +147,21 @@ class VideoTranslator:
         self.subtitles: Subtitles = Subtitles()
 
         self.convert_video_to_audio()
-        audio = whisper.load_audio(self.audio_path)
-        audio = whisper.pad_or_trim(audio)
 
-        mel = whisper.log_mel_spectrogram(
-            audio, n_mels=self.whisper_model.dims.n_mels
-        ).to(self.whisper_model.device)
-        _, probs = self.whisper_model.detect_language(mel)
-        self.subtitles.original_language = max(probs, key=probs.get)
+        segments, info = self.whisper_model.transcribe(self.audio_path)
+        self.subtitles.original_language = info.language
         if translation_languages:
             self.subtitles.languages = translation_languages
         else:
             self.subtitles.languages = [self.subtitles.original_language]
 
-        result = self.whisper_model.transcribe(self.audio_path)
         self.subtitles.subtitles[self.subtitles.original_language] = [
             {
-                "start": segment["start"],
-                "end": segment["end"],
-                "text": segment["text"],
+                "start": segment.start,
+                "end": segment.end,
+                "text": segment.text,
             }
-            for segment in result["segments"]
+            for segment in segments
         ]
 
         self.translate_subtitles()
